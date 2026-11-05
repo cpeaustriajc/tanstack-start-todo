@@ -13,8 +13,9 @@
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "routes": "tsr generate",
+    "migrations:check": "drizzle-kit generate && git diff --exit-code -- src/server/db/migrations && ! git ls-files --others --exclude-standard -- src/server/db/migrations | grep . && drizzle-kit check",
     "format": "oxfmt",
-    "verify": "tsr generate && oxfmt --check && effect-tsgo oxlint --type-aware && effect-tsgo tsc -p tsconfig.json && effect-tsgo tsrs -p tsconfig.json && vitest run --passWithNoTests"
+    "verify": "tsr generate && npm run --silent migrations:check && oxfmt --check && effect-tsgo oxlint --type-aware && effect-tsgo tsc -p tsconfig.json && effect-tsgo tsrs -p tsconfig.json && vitest run --passWithNoTests"
   },
   "dependencies": {
     "@commander-js/extra-typings": "15.0.0",

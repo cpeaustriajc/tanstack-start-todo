@@ -99,7 +99,43 @@
         "ignores": ["runSync"]
       }
     ],
-    "eslint/one-var": "off"
+    "eslint/one-var": "off",
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "react",
+            "importNames": ["useState", "useEffect", "useReducer"],
+            "message": "Client state lives in the feature provider's useReducer."
+          },
+          {
+            "name": "drizzle-orm/effect-sqlite-node",
+            "message": "Only src/server/db opens the database."
+          },
+          {
+            "name": "@effect/sql-sqlite-node",
+            "message": "Only src/server/db opens the database."
+          },
+          {
+            "name": "better-sqlite3",
+            "message": "Only src/server/db opens the database."
+          },
+          {
+            "name": "drizzle-orm/sqlite-core",
+            "message": "Tables are declared only in src/server/*/*-table.ts."
+          }
+        ]
+      }
+    ],
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "Match",
+        "property": "orElse",
+        "message": "Match every case; a fallback hides a missing transition."
+      }
+    ]
   },
   "overrides": [
     {
@@ -142,6 +178,267 @@
       "files": ["src/**/*-error.ts"],
       "rules": {
         "unicorn/throw-new-error": "off"
+      }
+    },
+    {
+      "files": ["src/features/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react",
+                "importNames": ["useState", "useEffect", "useReducer"],
+                "message": "Client state lives in the feature provider's useReducer."
+              },
+              {
+                "name": "drizzle-orm/effect-sqlite-node",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "@effect/sql-sqlite-node",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "better-sqlite3",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "drizzle-orm/sqlite-core",
+                "message": "Tables are declared only in src/server/*/*-table.ts."
+              }
+            ],
+            "patterns": [
+              {
+                "regex": "^drizzle-orm(/|$)",
+                "message": "Views read todos from the route loader, not from Drizzle."
+              },
+              {
+                "regex": "^#/server/",
+                "message": "Only the feature provider calls the server."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/routes/**/*.tsx"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react",
+                "importNames": ["useState", "useEffect", "useReducer"],
+                "message": "Client state lives in the feature provider's useReducer."
+              },
+              {
+                "name": "drizzle-orm/effect-sqlite-node",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "@effect/sql-sqlite-node",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "better-sqlite3",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "drizzle-orm/sqlite-core",
+                "message": "Tables are declared only in src/server/*/*-table.ts."
+              }
+            ],
+            "patterns": [
+              {
+                "regex": "^drizzle-orm(/|$)",
+                "message": "Views read todos from the route loader, not from Drizzle."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/*/*-model.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react",
+                "message": "Models, the server and the domain stay free of React."
+              },
+              {
+                "name": "drizzle-orm/effect-sqlite-node",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "@effect/sql-sqlite-node",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "better-sqlite3",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "drizzle-orm/sqlite-core",
+                "message": "Tables are declared only in src/server/*/*-table.ts."
+              },
+              {
+                "name": "#/domain/todo.ts",
+                "importNames": ["Todo", "TodoList"],
+                "message": "Models hold UI state, never server data."
+              }
+            ],
+            "patterns": [
+              {
+                "regex": "^drizzle-orm(/|$)",
+                "message": "Views read todos from the route loader, not from Drizzle."
+              },
+              {
+                "regex": "^#/server/",
+                "message": "Only the feature provider calls the server."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/*/*-provider.tsx"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "drizzle-orm/effect-sqlite-node",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "@effect/sql-sqlite-node",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "better-sqlite3",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "drizzle-orm/sqlite-core",
+                "message": "Tables are declared only in src/server/*/*-table.ts."
+              }
+            ],
+            "patterns": [
+              {
+                "regex": "^drizzle-orm(/|$)",
+                "message": "Views read todos from the route loader, not from Drizzle."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/server/**", "src/domain/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react",
+                "message": "Models, the server and the domain stay free of React."
+              },
+              {
+                "name": "drizzle-orm/effect-sqlite-node",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "@effect/sql-sqlite-node",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "better-sqlite3",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "drizzle-orm/sqlite-core",
+                "message": "Tables are declared only in src/server/*/*-table.ts."
+              }
+            ],
+            "patterns": [
+              {
+                "regex": "^#/features/",
+                "message": "The server and the domain never depend on features."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/server/db/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react",
+                "message": "Models, the server and the domain stay free of React."
+              },
+              {
+                "name": "drizzle-orm/sqlite-core",
+                "message": "Tables are declared only in src/server/*/*-table.ts."
+              }
+            ],
+            "patterns": [
+              {
+                "regex": "^#/features/",
+                "message": "The server and the domain never depend on features."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/server/*/*-table.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "react",
+                "message": "Models, the server and the domain stay free of React."
+              },
+              {
+                "name": "drizzle-orm/effect-sqlite-node",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "@effect/sql-sqlite-node",
+                "message": "Only src/server/db opens the database."
+              },
+              {
+                "name": "better-sqlite3",
+                "message": "Only src/server/db opens the database."
+              }
+            ],
+            "patterns": [
+              {
+                "regex": "^#/features/",
+                "message": "The server and the domain never depend on features."
+              }
+            ]
+          }
+        ]
       }
     }
   ]
