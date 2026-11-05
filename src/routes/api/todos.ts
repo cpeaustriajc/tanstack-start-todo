@@ -1,7 +1,7 @@
 import { Effect, Schema } from "effect";
 import { NewTodo, Todo, TodoList } from "#/domain/todo.ts";
-import { TodoRepository } from "#/server/todo-repository.ts";
-import type { TodoStoreError } from "#/server/todo-store-error.ts";
+import type { TodoError } from "#/server/todo/todo-repository.ts";
+import { TodoRepository } from "#/server/todo/todo-repository.ts";
 import { createFileRoute } from "@tanstack/react-router";
 import { runtime } from "#/server/runtime.ts";
 
@@ -14,9 +14,7 @@ const listResponse = Effect.gen(function* list() {
   const body = yield* Schema.encodeEffect(TodoList)(all);
   return Response.json(body);
 });
-const addResponse = (
-  todo: NewTodo,
-): Effect.Effect<Response, Schema.SchemaError | TodoStoreError, TodoRepository> =>
+const addResponse = (todo: NewTodo): Effect.Effect<Response, TodoError, TodoRepository> =>
   Effect.gen(function* add() {
     const todos = yield* TodoRepository;
     const added = yield* todos.add(todo);

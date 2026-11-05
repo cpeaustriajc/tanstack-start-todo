@@ -1,6 +1,6 @@
 import { fromPromise, setup } from "xstate";
 import type { TodoRef } from "#/domain/todo.ts";
-import { completeTodo } from "#/server/todo-functions.ts";
+import { completeTodo } from "#/server/todo/todo-functions.ts";
 
 const todoItemMachine = setup({
   actors: {

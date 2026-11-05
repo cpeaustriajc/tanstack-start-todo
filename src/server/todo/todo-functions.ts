@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect";
 import { NewTodo, TodoRef } from "#/domain/todo.ts";
-import { TodoRepository } from "#/server/todo-repository.ts";
+import { TodoRepository } from "#/server/todo/todo-repository.ts";
 import { createServerFn } from "@tanstack/react-start";
 import { runtime } from "#/server/runtime.ts";
 

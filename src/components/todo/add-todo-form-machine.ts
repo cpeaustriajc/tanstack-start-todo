@@ -1,7 +1,7 @@
 import { Effect, Schema } from "effect";
 import { assign, fromPromise, setup } from "xstate";
 import { NewTodo } from "#/domain/todo.ts";
-import { addTodo } from "#/server/todo-functions.ts";
+import { addTodo } from "#/server/todo/todo-functions.ts";
 
 type Refresh = () => Promise<void>;
 

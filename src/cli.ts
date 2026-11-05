@@ -3,15 +3,14 @@ import { Console, Effect, ManagedRuntime, Option, Schema } from "effect";
 import { NewTodo, TodoRef } from "#/domain/todo.ts";
 import { Command } from "@commander-js/extra-typings";
 import type { Todo } from "#/domain/todo.ts";
-import { TodoRepository } from "#/server/todo-repository.ts";
-import type { TodoStoreError } from "#/server/todo-store-error.ts";
+import type { TodoError } from "#/server/todo/todo-repository.ts";
+import { TodoRepository } from "#/server/todo/todo-repository.ts";
+import { layer } from "#/server/runtime.ts";
 
-await using runtime = ManagedRuntime.make(TodoRepository.layer);
+await using runtime = ManagedRuntime.make(layer);
 
 const program = new Command("todo");
-const run = <Value>(
-  effect: Effect.Effect<Value, Schema.SchemaError | TodoStoreError, TodoRepository>,
-): Promise<Value> =>
+const run = <Value>(effect: Effect.Effect<Value, TodoError, TodoRepository>): Promise<Value> =>
   runtime.runPromise(
     effect.pipe(
       Effect.catchTag("SchemaError", ({ message }) => Effect.sync(() => program.error(message))),

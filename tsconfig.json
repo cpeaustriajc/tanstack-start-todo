@@ -28,6 +28,13 @@
     "plugins": [
       {
         "name": "@effect/language-service",
+        "allowedUnstableApis": ["@effect/sql-sqlite-node", "effect/sql/SqlError"],
+        "overrides": [
+          {
+            "include": ["src/server/db/database.ts", "src/server/runtime.ts"],
+            "options": { "diagnosticSeverity": { "apiStabilityLeak": "off" } }
+          }
+        ],
         "diagnosticSeverity": {
           "abortControllerInEffect": "error",
           "acquireReleaseDisposable": "error",
@@ -183,5 +190,5 @@
       }
     ]
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts", "drizzle.config.ts"]
 }
