@@ -1,7 +1,7 @@
 import { Array } from "effect";
 import type { ReactElement } from "react";
 import type { Todo } from "#/domain/todo.ts";
-import { TodoItem } from "#/components/todo/todo-item.tsx";
+import { TodoItem } from "#/features/todo/todo-item.tsx";
 
 type Props = Readonly<{ todos: readonly Todo[] }>;
 

@@ -4,7 +4,7 @@ import { TextField as TextFieldPrimitive } from "react-aria-components";
 import type { TextFieldProps } from "react-aria-components";
 
 type Props = Readonly<
-  Pick<TextFieldProps, "aria-label" | "isDisabled" | "onChange" | "value"> & {
+  Pick<TextFieldProps, "aria-label" | "isDisabled" | "name"> & {
     placeholder: string;
   }
 >;
