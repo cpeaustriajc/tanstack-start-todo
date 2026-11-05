@@ -175,12 +175,6 @@
       "rules": {}
     },
     {
-      "files": ["src/**/*-error.ts"],
-      "rules": {
-        "unicorn/throw-new-error": "off"
-      }
-    },
-    {
       "files": ["src/features/**"],
       "rules": {
         "no-restricted-imports": [
