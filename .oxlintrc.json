@@ -7,7 +7,6 @@
     "oxc",
     "import",
     "react",
-    "react-perf",
     "jsx-a11y",
     "promise",
     "node"

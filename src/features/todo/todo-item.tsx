@@ -6,7 +6,6 @@ import { Checkbox } from "#/components/ui/checkbox.tsx";
 import { Option } from "effect";
 import type { ReactElement } from "react";
 import type { Todo } from "#/domain/todo.ts";
-import { useCallback } from "react";
 
 type Props = Readonly<{ todo: Todo }>;
 
@@ -19,12 +18,12 @@ const TodoItem = ({ todo }: Props): ReactElement => {
   const completion = completionOf({ id: todo.id, state });
   const isDone = Option.isSome(todo.doneAt);
   const isCompleting = CompletionState.$is("Completing")(completion);
-  const complete = useCallback(() => {
+  const complete = (): void => {
     dispatch(TodoEvent.Completion({ event: CompletionEvent.Complete(), id: todo.id }));
-  }, [dispatch, todo.id]);
-  const retry = useCallback(() => {
+  };
+  const retry = (): void => {
     dispatch(TodoEvent.Completion({ event: CompletionEvent.Retry(), id: todo.id }));
-  }, [dispatch, todo.id]);
+  };
 
   return (
     <li className="flex flex-col gap-1">
