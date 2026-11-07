@@ -1,66 +1,65 @@
 import { Data, Match, Option } from "effect";
+
 import type { TodoId } from "#/domain/todo-id.ts";
 
-type Id = typeof TodoId.Type;
-
 type Empty = Record<never, never>;
-type CompletionState = Data.TaggedEnum<{
-  CompleteFailed: Empty;
-  Completing: Empty;
+
+export type CompletionState = Data.TaggedEnum<{
   Idle: Empty;
-}>;
-type CompletionEvent = Data.TaggedEnum<{
-  Complete: Empty;
+  Completing: Empty;
   CompleteFailed: Empty;
+}>;
+export type CompletionEvent = Data.TaggedEnum<{
+  Complete: Empty;
   Completed: Empty;
+  CompletionFailed: Empty;
   Retry: Empty;
 }>;
-type CompletionCommand = Data.TaggedEnum<{
-  CompleteTodo: { readonly id: Id };
-  InvalidateLoader: Empty;
+export type CompletionCommand = Data.TaggedEnum<{
+  CompleteTodo: { readonly id: TodoId };
+  RefreshTodos: Empty;
 }>;
 type CompletionStep = readonly [CompletionState, Option.Option<CompletionCommand>];
 
-const CompletionState = Data.taggedEnum<CompletionState>();
-const CompletionEvent = Data.taggedEnum<CompletionEvent>();
-const CompletionCommand = Data.taggedEnum<CompletionCommand>();
+export const CompletionState = Data.taggedEnum<CompletionState>();
+export const CompletionEvent = Data.taggedEnum<CompletionEvent>();
+export const CompletionCommand = Data.taggedEnum<CompletionCommand>();
 
-const stay = (state: CompletionState): CompletionStep => [state, Option.none()];
-const completeTodo = (id: Id): CompletionStep => [
-  CompletionState.Completing(),
-  Option.some(CompletionCommand.CompleteTodo({ id })),
-];
-
-const transitionCompletion = ({
-  event,
+export const transitionCompletion = ({
   id,
   state,
-}: Readonly<{ event: CompletionEvent; id: Id; state: CompletionState }>): CompletionStep =>
+  event,
+}: Readonly<{ id: TodoId; state: CompletionState; event: CompletionEvent }>): CompletionStep =>
   Match.valueTags(state, {
-    CompleteFailed: (failed) =>
+    Idle: (idle) =>
       Match.valueTags(event, {
-        Complete: () => stay(failed),
-        CompleteFailed: () => stay(failed),
-        Completed: () => stay(failed),
-        Retry: () => completeTodo(id),
+        Complete: () => complete(id),
+        Completed: () => stay(idle),
+        CompletionFailed: () => stay(idle),
+        Retry: () => stay(idle),
       }),
     Completing: (completing) =>
       Match.valueTags(event, {
         Complete: () => stay(completing),
-        CompleteFailed: () => stay(CompletionState.CompleteFailed()),
-        Completed: (): CompletionStep => [
-          CompletionState.Idle(),
-          Option.some(CompletionCommand.InvalidateLoader()),
-        ],
+        Completed: () => to(CompletionState.Idle(), CompletionCommand.RefreshTodos()),
+        CompletionFailed: () => to(CompletionState.CompleteFailed()),
         Retry: () => stay(completing),
       }),
-    Idle: (idle) =>
+    CompleteFailed: (failed) =>
       Match.valueTags(event, {
-        Complete: () => completeTodo(id),
-        CompleteFailed: () => stay(idle),
-        Completed: () => stay(idle),
-        Retry: () => stay(idle),
+        Complete: () => stay(failed),
+        Completed: () => stay(failed),
+        CompletionFailed: () => stay(failed),
+        Retry: () => complete(id),
       }),
   });
 
-export { CompletionCommand, CompletionEvent, CompletionState, transitionCompletion };
+const complete = (id: TodoId) =>
+  to(CompletionState.Completing(), CompletionCommand.CompleteTodo({ id }));
+
+const stay = (state: CompletionState): CompletionStep => [state, Option.none()];
+
+const to = (state: CompletionState, command?: CompletionCommand): CompletionStep => [
+  state,
+  Option.fromUndefinedOr(command),
+];

@@ -1,11 +1,9 @@
-import type { ReactElement, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 type CardTitleProps = Readonly<{ children: ReactNode }>;
 
-const CardTitle = ({ children }: CardTitleProps): ReactElement => (
+export const CardTitle = ({ children }: CardTitleProps) => (
   <h2 className="font-heading text-base leading-snug font-medium" data-slot="card-title">
     {children}
   </h2>
 );
-
-export { CardTitle };

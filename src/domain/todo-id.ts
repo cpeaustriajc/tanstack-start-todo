@@ -1,9 +1,8 @@
 import { Schema } from "effect";
 
-const minimumId = 1;
-const TodoId = Schema.Int.pipe(
-  Schema.check(Schema.isGreaterThanOrEqualTo(minimumId)),
+export const TodoId = Schema.Int.pipe(
+  Schema.check(Schema.isGreaterThanOrEqualTo(1)),
   Schema.brand("TodoId"),
 );
 
-export { TodoId };
+export type TodoId = typeof TodoId.Type;

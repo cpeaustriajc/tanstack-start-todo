@@ -1,47 +1,50 @@
 #!/usr/bin/env node
-import { Console, Effect, ManagedRuntime, Option, Schema } from "effect";
-import { NewTodo, TodoRef } from "#/domain/todo.ts";
 import { Command } from "@commander-js/extra-typings";
-import type { Todo } from "#/domain/todo.ts";
-import type { TodoError } from "#/server/todo/todo-repository.ts";
-import { TodoRepository } from "#/server/todo/todo-repository.ts";
-import { layer } from "#/server/runtime.ts";
+import { Console, Effect, ManagedRuntime, Option, Schema } from "effect";
 
-await using runtime = ManagedRuntime.make(layer);
+import { NewTodo, TodoRef } from "#/domain/todo.ts";
+import type { Todo } from "#/domain/todo.ts";
+import { Database } from "#/server/db/database.ts";
+import type { TodoQueryError } from "#/server/todo/todo-queries.ts";
+import { findTodos, insertTodo, markTodoDone } from "#/server/todo/todo-queries.ts";
+
+await using runtime = ManagedRuntime.make(Database.layer);
 
 const program = new Command("todo");
-const run = <Value>(effect: Effect.Effect<Value, TodoError, TodoRepository>): Promise<Value> =>
+
+const run = <Value>(effect: Effect.Effect<Value, TodoQueryError, Database>) =>
   runtime.runPromise(
     effect.pipe(
       Effect.catchTag("SchemaError", ({ message }) => Effect.sync(() => program.error(message))),
     ),
   );
-const mark = (todo: Todo): string =>
-  Option.match(todo.doneAt, { onNone: () => "[ ]", onSome: () => "[x]" });
-const runAdd = (title: string): Promise<void> =>
+
+const checkboxOf = (todo: Todo) => (Option.isSome(todo.doneAt) ? "[x]" : "[ ]");
+
+const runAdd = (title: string) =>
   run(
-    Effect.gen(function* add() {
-      const todos = yield* TodoRepository;
+    Effect.gen(function* () {
       const newTodo = yield* Schema.decodeEffect(NewTodo)({ title });
-      const todo = yield* todos.add(newTodo);
+      const todo = yield* insertTodo(newTodo);
       yield* Console.log(`added #${todo.id}`);
     }),
   );
-const runList = (): Promise<void> =>
+
+const runList = () =>
   run(
-    Effect.gen(function* list() {
-      const todos = yield* TodoRepository;
-      for (const todo of yield* todos.list) {
-        yield* Console.log(`${mark(todo)} #${todo.id} ${todo.title}`);
+    Effect.gen(function* () {
+      const todos = yield* findTodos();
+      for (const todo of todos) {
+        yield* Console.log(`${checkboxOf(todo)} #${todo.id} ${todo.title}`);
       }
     }),
   );
-const runDone = (id: string): Promise<void> =>
+
+const runDone = (id: string) =>
   run(
-    Effect.gen(function* done() {
-      const todos = yield* TodoRepository;
+    Effect.gen(function* () {
       const ref = yield* Schema.decodeEffect(TodoRef)({ id: Number(id) });
-      yield* todos.complete(ref);
+      yield* markTodoDone(ref);
     }),
   );
 

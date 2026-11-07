@@ -1,69 +1,84 @@
 import { Data, Match, Option, Schema } from "effect";
+
 import { NewTodo } from "#/domain/todo.ts";
 
 type Empty = Record<never, never>;
-type AddingState = Data.TaggedEnum<{
-  AddFailed: { readonly todo: NewTodo };
-  Editing: Empty;
+
+export type AddingState = Data.TaggedEnum<{
+  Editing: { readonly title: string };
   Submitting: { readonly todo: NewTodo };
+  AddFailed: { readonly todo: NewTodo };
 }>;
-type AddingEvent = Data.TaggedEnum<{
-  Retry: Empty;
-  SaveFailed: Empty;
+export type AddingEvent = Data.TaggedEnum<{
+  Edit: { readonly title: string };
+  Submit: Empty;
   Saved: Empty;
-  Submit: { readonly title: string };
+  SaveFailed: Empty;
+  Retry: Empty;
 }>;
-type AddingCommand = Data.TaggedEnum<{
-  InvalidateLoader: Empty;
+export type AddingCommand = Data.TaggedEnum<{
   SaveTodo: { readonly todo: NewTodo };
+  RefreshTodos: Empty;
 }>;
 type AddingStep = readonly [AddingState, Option.Option<AddingCommand>];
 
-const AddingState = Data.taggedEnum<AddingState>();
-const AddingEvent = Data.taggedEnum<AddingEvent>();
-const AddingCommand = Data.taggedEnum<AddingCommand>();
+export const AddingState = Data.taggedEnum<AddingState>();
+export const AddingEvent = Data.taggedEnum<AddingEvent>();
+export const AddingCommand = Data.taggedEnum<AddingCommand>();
 
-const hasTitle = Schema.is(NewTodo);
-const stay = (state: AddingState): AddingStep => [state, Option.none()];
-const saveTodo = (todo: NewTodo): AddingStep => [
-  AddingState.Submitting({ todo }),
-  Option.some(AddingCommand.SaveTodo({ todo })),
-];
-const submit = (editing: AddingState, title: string): AddingStep =>
-  Option.match(Option.liftPredicate({ title }, hasTitle), {
-    onNone: () => stay(editing),
-    onSome: saveTodo,
-  });
-
-const transitionAdding = ({
-  event,
+export const transitionAdding = ({
   state,
-}: Readonly<{ event: AddingEvent; state: AddingState }>): AddingStep =>
+  event,
+}: Readonly<{ state: AddingState; event: AddingEvent }>): AddingStep =>
   Match.valueTags(state, {
-    AddFailed: (failed) =>
-      Match.valueTags(event, {
-        Retry: () => saveTodo(failed.todo),
-        SaveFailed: () => stay(failed),
-        Saved: () => stay(failed),
-        Submit: () => stay(failed),
-      }),
     Editing: (editing) =>
       Match.valueTags(event, {
-        Retry: () => stay(editing),
-        SaveFailed: () => stay(editing),
+        Edit: ({ title }) => to(AddingState.Editing({ title })),
+        Submit: () => submit(editing),
         Saved: () => stay(editing),
-        Submit: ({ title }) => submit(editing, title),
+        SaveFailed: () => stay(editing),
+        Retry: () => stay(editing),
       }),
     Submitting: (submitting) =>
       Match.valueTags(event, {
-        Retry: () => stay(submitting),
-        SaveFailed: () => stay(AddingState.AddFailed({ todo: submitting.todo })),
-        Saved: (): AddingStep => [
-          AddingState.Editing(),
-          Option.some(AddingCommand.InvalidateLoader()),
-        ],
+        Edit: () => stay(submitting),
         Submit: () => stay(submitting),
+        Saved: () => to(AddingState.Editing({ title: "" }), AddingCommand.RefreshTodos()),
+        SaveFailed: () => to(AddingState.AddFailed({ todo: submitting.todo })),
+        Retry: () => stay(submitting),
+      }),
+    AddFailed: (failed) =>
+      Match.valueTags(event, {
+        Edit: () => stay(failed),
+        Submit: () => stay(failed),
+        Saved: () => stay(failed),
+        SaveFailed: () => stay(failed),
+        Retry: () => save(failed.todo),
       }),
   });
 
-export { AddingCommand, AddingEvent, AddingState, transitionAdding };
+export const titleOf = (state: AddingState) =>
+  Match.valueTags(state, {
+    Editing: ({ title }) => title,
+    Submitting: ({ todo }) => todo.title,
+    AddFailed: ({ todo }) => todo.title,
+  });
+
+type Editing = Data.TaggedEnum.Value<AddingState, "Editing">;
+
+const submit = (editing: Editing) =>
+  hasTitle(editing) ? save({ title: editing.title }) : stay(editing);
+
+const hasTitle = ({ title }: Editing) => isNewTodo({ title });
+
+const isNewTodo = Schema.is(NewTodo);
+
+const save = (todo: NewTodo) =>
+  to(AddingState.Submitting({ todo }), AddingCommand.SaveTodo({ todo }));
+
+const stay = (state: AddingState): AddingStep => [state, Option.none()];
+
+const to = (state: AddingState, command?: AddingCommand): AddingStep => [
+  state,
+  Option.fromUndefinedOr(command),
+];

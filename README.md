@@ -15,37 +15,39 @@ with `table todos already exists`; delete it.
 ## Stack
 
 - TanStack Start: routes, server functions, server routes and SSR.
-- Effect (stable modules, plus the two exceptions below): `Schema` is the one source of types;
-  `Context.Service` and `Layer` hold the database and the repository.
+- Effect (stable modules, plus the exceptions below): `Schema` is the one source of types;
+  `Context.Service` and `Layer` hold the database. Queries are `SqlSchema` functions over
+  Drizzle; no repository.
 - Drizzle ORM 1.0.0-rc.5 through `drizzle-orm/effect-sqlite-node` on `@effect/sql-sqlite-node`
   (Node's `node:sqlite`); rows are decoded with `drizzle-orm/effect-schema`. drizzle-kit writes
-  the migrations. These run on Effect's SQL modules, tagged `@stability unstable`; they are the
-  only unstable APIs allowed.
+  the migrations. These run on Effect's SQL modules, tagged `@stability unstable`; they and
+  `effect/sql/SqlSchema` (row decoding for the queries) are the only unstable APIs allowed.
 - React only for client state: one `useReducer` per feature, React Compiler for memoization.
 - shadcn/ui on the React Aria base, in `src/components/ui`.
 - commander for the CLI.
 
 ## Layout
 
-| Path                                  | Holds                                                                          |
-| ------------------------------------- | ------------------------------------------------------------------------------ |
-| `src/domain/`                         | shared schemas (`Todo`, `NewTodo`, `TodoRef`, `TodoId`); no state              |
-| `src/server/db/`                      | the `Database` service, the migrator and the migrations; the only database I/O |
-| `src/server/todo/`                    | the `todos` table, the repository and the server functions                     |
-| `src/features/todo/*-model.ts`        | client state as statechart regions; pure, no React                             |
-| `src/features/todo/todo-provider.tsx` | the feature's only `useReducer`, its contexts and the command runner           |
-| `src/features/todo/*.tsx`             | views: todos from loader props, request status from the context                |
+| Path                                  | Holds                                                                                |
+| ------------------------------------- | ------------------------------------------------------------------------------------ |
+| `src/domain/`                         | shared schemas (`Todo`, `NewTodo`, `TodoRef`, `TodoId`); no state                    |
+| `src/server/db/`                      | the `Database` service, the migrator and the migrations; the only database I/O       |
+| `src/server/todo/`                    | the `todoTable`, the `SqlSchema` queries and the server functions                    |
+| `src/features/todo/*-model.ts`        | client state as statechart regions; pure, no React                                   |
+| `src/features/todo/todo-provider.tsx` | the feature's only `useReducer`, the command runner, `useAdding` and `useCompletion` |
+| `src/features/todo/*.tsx`             | views: todos from loader props, request status from the context                      |
 
 Server state lives on the server and reaches the page only through the route loader. Client state
 is UI state only, never a copy of server data: "done" is derived from `todo.doneAt` at render, and
-the draft title stays in the form field.
+the draft title lives in `Editing`, so a reload of the list never clears it.
 
 ```mermaid
 stateDiagram-v2
   state Adding {
     [*] --> Editing
+    Editing --> Editing : Edit
     Editing --> Submitting : Submit [hasTitle] / SaveTodo
-    Submitting --> Editing : Saved / InvalidateLoader
+    Submitting --> Editing : Saved / RefreshTodos
     Submitting --> AddFailed : SaveFailed
     AddFailed --> Submitting : Retry / SaveTodo
   }
@@ -53,8 +55,8 @@ stateDiagram-v2
   state Completion {
     [*] --> Idle
     Idle --> Completing : Complete / CompleteTodo
-    Completing --> Idle : Completed / InvalidateLoader
-    Completing --> CompleteFailed : CompleteFailed
+    Completing --> Idle : Completed / RefreshTodos
+    Completing --> CompleteFailed : CompletionFailed
     CompleteFailed --> Completing : Retry / CompleteTodo
   }
 ```
@@ -71,7 +73,7 @@ to its region and returns `[State, Option<Command>]`; the provider runs the comm
 1. `tsr generate`
 2. `migrations:check`: `drizzle-kit generate`, then fail on a migration that is not committed or
    staged; then `drizzle-kit check`.
-3. `oxfmt --check`
+3. `oxfmt --check`, which also sorts imports by module path
 4. `effect-tsgo oxlint --type-aware`: every category except nursery at error, comments banned, and
    the layer gates below.
 5. `effect-tsgo tsc`: TypeScript 7, every strict flag, every Effect diagnostic at error. The type
@@ -123,8 +125,18 @@ Config files cannot hold comments here, so each relaxed setting has its reason b
 | `src/components/ui/**`: `forbid-component-props`, `jsx-props-no-spreading` off                         | a shadcn wrapper sets the class names and passes the rest to React Aria                                                                                                   |
 | `src/routes/**`: `react/only-export-components` off                                                    | a route file exports `Route`                                                                                                                                              |
 | `src/features/*/*-provider.tsx`: `react/only-export-components` off                                    | the provider file exports its context hooks next to the provider                                                                                                          |
+| `src/**/*-error.ts`: `unicorn/throw-new-error` off                                                     | `Schema.TaggedError<…>()` is a class factory call, not a thrown error                                                                                                     |
 | `src/features/*/*-model.ts`: `typescript/no-generated-empty-object-type` off                           | a `Data.TaggedEnum` variant without fields is an empty object type                                                                                                        |
 | `vite.config.ts`, `drizzle.config.ts`: `import/no-default-export` off                                  | Vite and drizzle-kit read the default export                                                                                                                              |
+| `eslint/sort-keys` off                                                                                 | keys follow reading order: a statechart in flow order, `try` before `catch`                                                                                               |
+| `eslint/sort-imports` off                                                                              | it sorts by the first imported name; oxfmt sorts by module path instead                                                                                                   |
+| `eslint/no-ternary` off                                                                                | it contradicts `unicorn/prefer-ternary`; `no-nested-ternary` still bans a ternary inside a ternary                                                                        |
+| `react/jsx-no-literals` off                                                                            | there is no i18n; text stays in the markup it belongs to                                                                                                                  |
+| `eslint/no-magic-numbers` off                                                                          | `{ status: 201 }` reads better than a constant named `created`                                                                                                            |
+| `eslint/func-names` off                                                                                | `Effect.gen(function* () {…})` needs no name                                                                                                                              |
+| `typescript/explicit-function-return-type`, `explicit-module-boundary-types` off                       | TypeScript infers the return types; annotations repeated them                                                                                                             |
+| `import/exports-last`, `import/group-exports` off                                                      | each declaration says `export` where it starts, so a file opens with its main export                                                                                      |
+| `eslint/no-use-before-define` with `variables: false`                                                  | a function body may name a helper defined below it; a top-level use before definition still fails                                                                         |
 
 ## Proof
 
@@ -209,14 +221,14 @@ $ node src/cli.ts list
 
 ### API
 
-Sent from the page with `fetch` against `npm run dev`:
+Sent from the page with `fetch` against `npm run dev`, on 2026-11-08:
 
 ```text
-POST {"title":"from api"} -> 201 {"doneAt":null,"id":2,"title":"from api"}
-POST {"title":""}         -> 400 {"error":"Expected a value with a length of at least 1\n  at [\"title\"]"}
-POST {}                   -> 400 {"error":"Missing key\n  at [\"title\"]"}
-POST not json             -> 400 {"error":"Expected a valid JSON string"}
-GET                       -> 200 [{"doneAt":"2026-11-05T14:33:43.725Z","id":1,"title":"buy milk"},{"doneAt":null,"id":2,"title":"from api"}]
+POST {"title":"water plants"} -> 201 {"id":3,"title":"water plants","doneAt":null}
+POST {"title":""}             -> 400 {"error":"Expected a value with a length of at least 1\n  at [\"title\"]"}
+POST {}                       -> 400 {"error":"Missing key\n  at [\"title\"]"}
+POST not json                 -> 400 {"error":"Expected a valid JSON string"}
+GET                           -> 200 [{"id":1,"title":"buy milk","doneAt":"2026-11-07T16:32:14.864Z"},{"id":2,"title":"from api","doneAt":null},{"id":3,"title":"water plants","doneAt":null}]
 ```
 
 ### Web page
@@ -224,12 +236,13 @@ GET                       -> 200 [{"doneAt":"2026-11-05T14:33:43.725Z","id":1,"t
 Driven by hand in a browser on the same database. To fail a request, the page's `fetch` was
 replaced in the console with one that rejects calls to `/_serverFn/`, then restored before Retry.
 
-| Step                                 | Result                                                                          |
-| ------------------------------------ | ------------------------------------------------------------------------------- |
-| Add with an empty title              | nothing is saved, no request, no alert                                          |
-| Add "water plants"                   | the todo appears; the field clears                                              |
-| Add "call mom" with requests failing | "Could not add the todo." and Retry; the field keeps "call mom" and is disabled |
-| Retry with requests working          | "call mom" appears; the alert goes; the field clears                            |
-| Complete "water plants", failing     | the box stays clear; "Could not complete the todo." and Retry                   |
-| Retry with requests working          | the box is checked; `GET /api/todos` shows `doneAt` set                         |
-| Complete "from api"                  | the box is checked; `GET /api/todos` shows `doneAt` set                         |
+| Step                                                      | Result                                                                          |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Add with an empty title                                   | nothing is saved, no request, no alert                                          |
+| Add "water plants"                                        | the todo appears; the field clears                                              |
+| Add "call mom" with requests failing                      | "Could not add the todo." and Retry; the field keeps "call mom" and is disabled |
+| Retry with requests working                               | "call mom" appears; the alert goes; the field clears                            |
+| Complete "water plants", failing                          | the box stays clear; "Could not complete the todo." and Retry                   |
+| Retry with requests working                               | the box is checked; `GET /api/todos` shows `doneAt` set                         |
+| Complete "from api"                                       | the box is checked; `GET /api/todos` shows `doneAt` set                         |
+| Type "buy eggs", add a todo from the API, complete a todo | the field still holds "buy eggs" (2026-11-08)                                   |
