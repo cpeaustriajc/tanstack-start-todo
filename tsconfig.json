@@ -28,7 +28,11 @@
     "plugins": [
       {
         "name": "@effect/language-service",
-        "allowedUnstableApis": ["@effect/sql-sqlite-node", "effect/sql/SqlError"],
+        "allowedUnstableApis": [
+          "@effect/sql-sqlite-node",
+          "effect/sql/SqlError",
+          "effect/sql/SqlSchema"
+        ],
         "overrides": [
           {
             "include": ["src/server/db/database.ts", "src/server/runtime.ts"],

@@ -15,12 +15,13 @@ with `table todos already exists`; delete it.
 ## Stack
 
 - TanStack Start: routes, server functions, server routes and SSR.
-- Effect (stable modules, plus the two exceptions below): `Schema` is the one source of types;
-  `Context.Service` and `Layer` hold the database and the repository.
+- Effect (stable modules, plus the exceptions below): `Schema` is the one source of types;
+  `Context.Service` and `Layer` hold the database. Queries are `SqlSchema` functions over
+  Drizzle; no repository.
 - Drizzle ORM 1.0.0-rc.5 through `drizzle-orm/effect-sqlite-node` on `@effect/sql-sqlite-node`
   (Node's `node:sqlite`); rows are decoded with `drizzle-orm/effect-schema`. drizzle-kit writes
-  the migrations. These run on Effect's SQL modules, tagged `@stability unstable`; they are the
-  only unstable APIs allowed.
+  the migrations. These run on Effect's SQL modules, tagged `@stability unstable`; they and
+  `effect/sql/SqlSchema` (row decoding for the queries) are the only unstable APIs allowed.
 - React only for client state: one `useReducer` per feature, React Compiler for memoization.
 - shadcn/ui on the React Aria base, in `src/components/ui`.
 - commander for the CLI.
@@ -31,7 +32,7 @@ with `table todos already exists`; delete it.
 | ------------------------------------- | ------------------------------------------------------------------------------------ |
 | `src/domain/`                         | shared schemas (`Todo`, `NewTodo`, `TodoRef`, `TodoId`); no state                    |
 | `src/server/db/`                      | the `Database` service, the migrator and the migrations; the only database I/O       |
-| `src/server/todo/`                    | the `todoTable`, the repository and the server functions                             |
+| `src/server/todo/`                    | the `todoTable`, the `SqlSchema` queries and the server functions                    |
 | `src/features/todo/*-model.ts`        | client state as statechart regions; pure, no React                                   |
 | `src/features/todo/todo-provider.tsx` | the feature's only `useReducer`, the command runner, `useAdding` and `useCompletion` |
 | `src/features/todo/*.tsx`             | views: todos from loader props, request status from the context                      |
