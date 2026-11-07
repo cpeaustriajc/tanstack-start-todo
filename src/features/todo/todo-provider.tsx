@@ -102,7 +102,7 @@ const request = <Event,>(
 ) =>
   Effect.tryPromise({ try: call, catch: (cause) => RequestFailed.make({ cause }) }).pipe(
     Effect.as(succeeded),
-    Effect.tapError(Effect.logError),
+    Effect.tapError(({ cause }) => Effect.logError("Request failed", cause)),
     Effect.orElseSucceed(() => failed),
   );
 
