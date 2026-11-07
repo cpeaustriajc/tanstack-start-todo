@@ -38,12 +38,13 @@ with `table todos already exists`; delete it.
 
 Server state lives on the server and reaches the page only through the route loader. Client state
 is UI state only, never a copy of server data: "done" is derived from `todo.doneAt` at render, and
-the draft title stays in the form field.
+the draft title lives in `Editing`, so a reload of the list never clears it.
 
 ```mermaid
 stateDiagram-v2
   state Adding {
     [*] --> Editing
+    Editing --> Editing : Edit
     Editing --> Submitting : Submit [hasTitle] / SaveTodo
     Submitting --> Editing : Saved / InvalidateLoader
     Submitting --> AddFailed : SaveFailed
@@ -71,7 +72,7 @@ to its region and returns `[State, Option<Command>]`; the provider runs the comm
 1. `tsr generate`
 2. `migrations:check`: `drizzle-kit generate`, then fail on a migration that is not committed or
    staged; then `drizzle-kit check`.
-3. `oxfmt --check`
+3. `oxfmt --check`, which also sorts imports by module path
 4. `effect-tsgo oxlint --type-aware`: every category except nursery at error, comments banned, and
    the layer gates below.
 5. `effect-tsgo tsc`: TypeScript 7, every strict flag, every Effect diagnostic at error. The type
@@ -125,6 +126,15 @@ Config files cannot hold comments here, so each relaxed setting has its reason b
 | `src/features/*/*-provider.tsx`: `react/only-export-components` off                                    | the provider file exports its context hooks next to the provider                                                                                                          |
 | `src/features/*/*-model.ts`: `typescript/no-generated-empty-object-type` off                           | a `Data.TaggedEnum` variant without fields is an empty object type                                                                                                        |
 | `vite.config.ts`, `drizzle.config.ts`: `import/no-default-export` off                                  | Vite and drizzle-kit read the default export                                                                                                                              |
+| `eslint/sort-keys` off                                                                                 | keys follow reading order: a statechart in flow order, `try` before `catch`                                                                                               |
+| `eslint/sort-imports` off                                                                              | it sorts by the first imported name; oxfmt sorts by module path instead                                                                                                   |
+| `eslint/no-ternary` off                                                                                | it contradicts `unicorn/prefer-ternary`, and its workaround was a chain of `Option` calls                                                                                 |
+| `react/jsx-no-literals` off                                                                            | there is no i18n; text stays in the markup it belongs to                                                                                                                  |
+| `eslint/no-magic-numbers` off                                                                          | `{ status: 201 }` reads better than a constant named `created`                                                                                                            |
+| `eslint/func-names` off                                                                                | `Effect.gen(function* () {…})` needs no name                                                                                                                              |
+| `typescript/explicit-function-return-type`, `explicit-module-boundary-types` off                       | TypeScript infers the return types; annotations repeated them                                                                                                             |
+| `import/exports-last`, `import/group-exports` off                                                      | each declaration says `export` where it starts, so a file opens with its main export                                                                                      |
+| `eslint/no-use-before-define` with `variables: false`                                                  | a function body may name a helper defined below it; a top-level use before definition still fails                                                                         |
 
 ## Proof
 
@@ -224,12 +234,13 @@ GET                       -> 200 [{"doneAt":"2026-11-05T14:33:43.725Z","id":1,"t
 Driven by hand in a browser on the same database. To fail a request, the page's `fetch` was
 replaced in the console with one that rejects calls to `/_serverFn/`, then restored before Retry.
 
-| Step                                 | Result                                                                          |
-| ------------------------------------ | ------------------------------------------------------------------------------- |
-| Add with an empty title              | nothing is saved, no request, no alert                                          |
-| Add "water plants"                   | the todo appears; the field clears                                              |
-| Add "call mom" with requests failing | "Could not add the todo." and Retry; the field keeps "call mom" and is disabled |
-| Retry with requests working          | "call mom" appears; the alert goes; the field clears                            |
-| Complete "water plants", failing     | the box stays clear; "Could not complete the todo." and Retry                   |
-| Retry with requests working          | the box is checked; `GET /api/todos` shows `doneAt` set                         |
-| Complete "from api"                  | the box is checked; `GET /api/todos` shows `doneAt` set                         |
+| Step                                                      | Result                                                                          |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Add with an empty title                                   | nothing is saved, no request, no alert                                          |
+| Add "water plants"                                        | the todo appears; the field clears                                              |
+| Add "call mom" with requests failing                      | "Could not add the todo." and Retry; the field keeps "call mom" and is disabled |
+| Retry with requests working                               | "call mom" appears; the alert goes; the field clears                            |
+| Complete "water plants", failing                          | the box stays clear; "Could not complete the todo." and Retry                   |
+| Retry with requests working                               | the box is checked; `GET /api/todos` shows `doneAt` set                         |
+| Complete "from api"                                       | the box is checked; `GET /api/todos` shows `doneAt` set                         |
+| Type "buy eggs", add a todo from the API, complete a todo | the field still holds "buy eggs" (2026-11-08)                                   |
