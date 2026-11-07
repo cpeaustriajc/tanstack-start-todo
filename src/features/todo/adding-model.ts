@@ -69,7 +69,9 @@ type Editing = Data.TaggedEnum.Value<AddingState, "Editing">;
 const submit = (editing: Editing) =>
   hasTitle(editing) ? save({ title: editing.title }) : stay(editing);
 
-const hasTitle = ({ title }: Editing) => Schema.is(NewTodo)({ title });
+const hasTitle = ({ title }: Editing) => isNewTodo({ title });
+
+const isNewTodo = Schema.is(NewTodo);
 
 const save = (todo: NewTodo) =>
   to(AddingState.Submitting({ todo }), AddingCommand.SaveTodo({ todo }));

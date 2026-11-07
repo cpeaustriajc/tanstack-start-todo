@@ -12,7 +12,7 @@ export type CompletionState = Data.TaggedEnum<{
 export type CompletionEvent = Data.TaggedEnum<{
   Complete: Empty;
   Completed: Empty;
-  CompleteFailed: Empty;
+  CompletionFailed: Empty;
   Retry: Empty;
 }>;
 export type CompletionCommand = Data.TaggedEnum<{
@@ -35,21 +35,21 @@ export const transitionCompletion = ({
       Match.valueTags(event, {
         Complete: () => complete(id),
         Completed: () => stay(idle),
-        CompleteFailed: () => stay(idle),
+        CompletionFailed: () => stay(idle),
         Retry: () => stay(idle),
       }),
     Completing: (completing) =>
       Match.valueTags(event, {
         Complete: () => stay(completing),
         Completed: () => to(CompletionState.Idle(), CompletionCommand.RefreshTodos()),
-        CompleteFailed: () => to(CompletionState.CompleteFailed()),
+        CompletionFailed: () => to(CompletionState.CompleteFailed()),
         Retry: () => stay(completing),
       }),
     CompleteFailed: (failed) =>
       Match.valueTags(event, {
         Complete: () => stay(failed),
         Completed: () => stay(failed),
-        CompleteFailed: () => stay(failed),
+        CompletionFailed: () => stay(failed),
         Retry: () => complete(id),
       }),
   });

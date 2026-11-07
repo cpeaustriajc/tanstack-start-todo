@@ -91,7 +91,7 @@ const runCommand = (
     CompleteTodo: ({ id }) =>
       request(() => completeTodo({ data: { id } }), {
         succeeded: TodoEvent.Completion({ id, event: CompletionEvent.Completed() }),
-        failed: TodoEvent.Completion({ id, event: CompletionEvent.CompleteFailed() }),
+        failed: TodoEvent.Completion({ id, event: CompletionEvent.CompletionFailed() }),
       }).pipe(Effect.map(dispatch)),
     RefreshTodos: () => Effect.promise(refreshTodos),
   });

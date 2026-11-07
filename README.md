@@ -55,7 +55,7 @@ stateDiagram-v2
     [*] --> Idle
     Idle --> Completing : Complete / CompleteTodo
     Completing --> Idle : Completed / RefreshTodos
-    Completing --> CompleteFailed : CompleteFailed
+    Completing --> CompleteFailed : CompletionFailed
     CompleteFailed --> Completing : Retry / CompleteTodo
   }
 ```
@@ -220,14 +220,14 @@ $ node src/cli.ts list
 
 ### API
 
-Sent from the page with `fetch` against `npm run dev`:
+Sent from the page with `fetch` against `npm run dev`, on 2026-11-08:
 
 ```text
-POST {"title":"from api"} -> 201 {"doneAt":null,"id":2,"title":"from api"}
-POST {"title":""}         -> 400 {"error":"Expected a value with a length of at least 1\n  at [\"title\"]"}
-POST {}                   -> 400 {"error":"Missing key\n  at [\"title\"]"}
-POST not json             -> 400 {"error":"Expected a valid JSON string"}
-GET                       -> 200 [{"doneAt":"2026-11-05T14:33:43.725Z","id":1,"title":"buy milk"},{"doneAt":null,"id":2,"title":"from api"}]
+POST {"title":"water plants"} -> 201 {"id":3,"title":"water plants","doneAt":null}
+POST {"title":""}             -> 400 {"error":"Expected a value with a length of at least 1\n  at [\"title\"]"}
+POST {}                       -> 400 {"error":"Missing key\n  at [\"title\"]"}
+POST not json                 -> 400 {"error":"Expected a valid JSON string"}
+GET                           -> 200 [{"id":1,"title":"buy milk","doneAt":"2026-11-07T16:32:14.864Z"},{"id":2,"title":"from api","doneAt":null},{"id":3,"title":"water plants","doneAt":null}]
 ```
 
 ### Web page
