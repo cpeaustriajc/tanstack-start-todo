@@ -2,7 +2,6 @@ import { Data, Match, Option } from "effect";
 
 import type { TodoId } from "#/domain/todo-id.ts";
 
-type Id = typeof TodoId.Type;
 type Empty = Record<never, never>;
 
 export type CompletionState = Data.TaggedEnum<{
@@ -17,8 +16,8 @@ export type CompletionEvent = Data.TaggedEnum<{
   Retry: Empty;
 }>;
 export type CompletionCommand = Data.TaggedEnum<{
-  CompleteTodo: { readonly id: Id };
-  InvalidateLoader: Empty;
+  CompleteTodo: { readonly id: TodoId };
+  RefreshTodos: Empty;
 }>;
 type CompletionStep = readonly [CompletionState, Option.Option<CompletionCommand>];
 
@@ -30,7 +29,7 @@ export const transitionCompletion = ({
   id,
   state,
   event,
-}: Readonly<{ id: Id; state: CompletionState; event: CompletionEvent }>): CompletionStep =>
+}: Readonly<{ id: TodoId; state: CompletionState; event: CompletionEvent }>): CompletionStep =>
   Match.valueTags(state, {
     Idle: (idle) =>
       Match.valueTags(event, {
@@ -42,8 +41,8 @@ export const transitionCompletion = ({
     Completing: (completing) =>
       Match.valueTags(event, {
         Complete: () => stay(completing),
-        Completed: () => enter(CompletionState.Idle(), CompletionCommand.InvalidateLoader()),
-        CompleteFailed: () => stay(CompletionState.CompleteFailed()),
+        Completed: () => to(CompletionState.Idle(), CompletionCommand.RefreshTodos()),
+        CompleteFailed: () => to(CompletionState.CompleteFailed()),
         Retry: () => stay(completing),
       }),
     CompleteFailed: (failed) =>
@@ -55,12 +54,12 @@ export const transitionCompletion = ({
       }),
   });
 
-const complete = (id: Id) =>
-  enter(CompletionState.Completing(), CompletionCommand.CompleteTodo({ id }));
+const complete = (id: TodoId) =>
+  to(CompletionState.Completing(), CompletionCommand.CompleteTodo({ id }));
 
 const stay = (state: CompletionState): CompletionStep => [state, Option.none()];
 
-const enter = (state: CompletionState, command: CompletionCommand): CompletionStep => [
+const to = (state: CompletionState, command?: CompletionCommand): CompletionStep => [
   state,
-  Option.some(command),
+  Option.fromUndefinedOr(command),
 ];

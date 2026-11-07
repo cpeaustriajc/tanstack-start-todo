@@ -6,7 +6,7 @@ import { Context, DateTime, Effect, Layer, Schema } from "effect";
 import type { NewTodo, TodoRef } from "#/domain/todo.ts";
 import { Todo } from "#/domain/todo.ts";
 import { Database } from "#/server/db/database.ts";
-import { todos } from "#/server/todo/todo-table.ts";
+import { todoTable } from "#/server/todo/todo-table.ts";
 
 export type TodoError = EffectDrizzleQueryError | Schema.SchemaError;
 
@@ -16,7 +16,7 @@ interface TodoRepositoryShape {
   readonly complete: (ref: TodoRef) => Effect.Effect<void, EffectDrizzleQueryError>;
 }
 
-const TodoRow = createSelectSchema(todos);
+const TodoRow = createSelectSchema(todoTable);
 const toTodo = Schema.decodeUnknownEffect(TodoRow.pipe(Schema.decodeTo(Todo)));
 
 const makeTodoRepository = Effect.gen(function* () {
@@ -24,12 +24,12 @@ const makeTodoRepository = Effect.gen(function* () {
   const repository: TodoRepositoryShape = {
     list: db
       .select()
-      .from(todos)
-      .orderBy(todos.id)
+      .from(todoTable)
+      .orderBy(todoTable.id)
       .pipe(Effect.flatMap((rows) => Effect.forEach(rows, (row) => toTodo(row)))),
     add: ({ title }) =>
       db
-        .insert(todos)
+        .insert(todoTable)
         .values({ title })
         .returning()
         .pipe(Effect.flatMap(([row]) => toTodo(row))),
@@ -37,9 +37,9 @@ const makeTodoRepository = Effect.gen(function* () {
       DateTime.now.pipe(
         Effect.flatMap((now) =>
           db
-            .update(todos)
+            .update(todoTable)
             .set({ doneAt: DateTime.formatIso(now) })
-            .where(and(eq(todos.id, id), isNull(todos.doneAt))),
+            .where(and(eq(todoTable.id, id), isNull(todoTable.doneAt))),
         ),
         Effect.asVoid,
       ),

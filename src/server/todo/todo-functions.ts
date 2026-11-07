@@ -8,8 +8,8 @@ import { TodoRepository } from "#/server/todo/todo-repository.ts";
 export const listTodos = createServerFn({ method: "GET" }).handler(() =>
   runtime.runPromise(
     Effect.gen(function* () {
-      const todos = yield* TodoRepository;
-      return yield* todos.list;
+      const repository = yield* TodoRepository;
+      return yield* repository.list;
     }),
   ),
 );
@@ -19,8 +19,8 @@ export const addTodo = createServerFn({ method: "POST" })
   .handler(({ data }) =>
     runtime.runPromise(
       Effect.gen(function* () {
-        const todos = yield* TodoRepository;
-        return yield* todos.add(data);
+        const repository = yield* TodoRepository;
+        return yield* repository.add(data);
       }),
     ),
   );
@@ -30,8 +30,8 @@ export const completeTodo = createServerFn({ method: "POST" })
   .handler(({ data }) =>
     runtime.runPromise(
       Effect.gen(function* () {
-        const todos = yield* TodoRepository;
-        yield* todos.complete(data);
+        const repository = yield* TodoRepository;
+        yield* repository.complete(data);
       }),
     ),
   );

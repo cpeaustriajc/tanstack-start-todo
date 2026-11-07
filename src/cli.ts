@@ -24,9 +24,9 @@ const mark = (todo: Todo) => (Option.isSome(todo.doneAt) ? "[x]" : "[ ]");
 const runAdd = (title: string) =>
   run(
     Effect.gen(function* () {
-      const todos = yield* TodoRepository;
+      const repository = yield* TodoRepository;
       const newTodo = yield* Schema.decodeEffect(NewTodo)({ title });
-      const todo = yield* todos.add(newTodo);
+      const todo = yield* repository.add(newTodo);
       yield* Console.log(`added #${todo.id}`);
     }),
   );
@@ -34,8 +34,9 @@ const runAdd = (title: string) =>
 const runList = () =>
   run(
     Effect.gen(function* () {
-      const todos = yield* TodoRepository;
-      for (const todo of yield* todos.list) {
+      const repository = yield* TodoRepository;
+      const todos = yield* repository.list;
+      for (const todo of todos) {
         yield* Console.log(`${mark(todo)} #${todo.id} ${todo.title}`);
       }
     }),
@@ -44,9 +45,9 @@ const runList = () =>
 const runDone = (id: string) =>
   run(
     Effect.gen(function* () {
-      const todos = yield* TodoRepository;
+      const repository = yield* TodoRepository;
       const ref = yield* Schema.decodeEffect(TodoRef)({ id: Number(id) });
-      yield* todos.complete(ref);
+      yield* repository.complete(ref);
     }),
   );
 

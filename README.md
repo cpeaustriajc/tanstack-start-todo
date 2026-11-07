@@ -27,14 +27,14 @@ with `table todos already exists`; delete it.
 
 ## Layout
 
-| Path                                  | Holds                                                                          |
-| ------------------------------------- | ------------------------------------------------------------------------------ |
-| `src/domain/`                         | shared schemas (`Todo`, `NewTodo`, `TodoRef`, `TodoId`); no state              |
-| `src/server/db/`                      | the `Database` service, the migrator and the migrations; the only database I/O |
-| `src/server/todo/`                    | the `todos` table, the repository and the server functions                     |
-| `src/features/todo/*-model.ts`        | client state as statechart regions; pure, no React                             |
-| `src/features/todo/todo-provider.tsx` | the feature's only `useReducer`, its contexts and the command runner           |
-| `src/features/todo/*.tsx`             | views: todos from loader props, request status from the context                |
+| Path                                  | Holds                                                                                |
+| ------------------------------------- | ------------------------------------------------------------------------------------ |
+| `src/domain/`                         | shared schemas (`Todo`, `NewTodo`, `TodoRef`, `TodoId`); no state                    |
+| `src/server/db/`                      | the `Database` service, the migrator and the migrations; the only database I/O       |
+| `src/server/todo/`                    | the `todoTable`, the repository and the server functions                             |
+| `src/features/todo/*-model.ts`        | client state as statechart regions; pure, no React                                   |
+| `src/features/todo/todo-provider.tsx` | the feature's only `useReducer`, the command runner, `useAdding` and `useCompletion` |
+| `src/features/todo/*.tsx`             | views: todos from loader props, request status from the context                      |
 
 Server state lives on the server and reaches the page only through the route loader. Client state
 is UI state only, never a copy of server data: "done" is derived from `todo.doneAt` at render, and
@@ -46,7 +46,7 @@ stateDiagram-v2
     [*] --> Editing
     Editing --> Editing : Edit
     Editing --> Submitting : Submit [hasTitle] / SaveTodo
-    Submitting --> Editing : Saved / InvalidateLoader
+    Submitting --> Editing : Saved / RefreshTodos
     Submitting --> AddFailed : SaveFailed
     AddFailed --> Submitting : Retry / SaveTodo
   }
@@ -54,7 +54,7 @@ stateDiagram-v2
   state Completion {
     [*] --> Idle
     Idle --> Completing : Complete / CompleteTodo
-    Completing --> Idle : Completed / InvalidateLoader
+    Completing --> Idle : Completed / RefreshTodos
     Completing --> CompleteFailed : CompleteFailed
     CompleteFailed --> Completing : Retry / CompleteTodo
   }

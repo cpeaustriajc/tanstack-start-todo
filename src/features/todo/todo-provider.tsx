@@ -1,12 +1,18 @@
 import { useRouter } from "@tanstack/react-router";
 import { Effect, Function, Match, Option } from "effect";
-import type { ReactNode } from "react";
+import type { ReactNode, SyntheticEvent } from "react";
 import { createContext, use, useEffect, useReducer } from "react";
 
+import type { TodoId } from "#/domain/todo-id.ts";
 import { AddingEvent } from "#/features/todo/adding-model.ts";
 import { CompletionEvent } from "#/features/todo/completion-model.ts";
 import type { TodoCommand, TodoState, TodoStep } from "#/features/todo/todo-model.ts";
-import { TodoEvent, initialTodoState, transitionTodo } from "#/features/todo/todo-model.ts";
+import {
+  TodoEvent,
+  completionOf,
+  initialTodoState,
+  transitionTodo,
+} from "#/features/todo/todo-model.ts";
 import { addTodo, completeTodo } from "#/server/todo/todo-functions.ts";
 
 type Dispatch = (event: TodoEvent) => void;
@@ -17,9 +23,11 @@ export const TodoProvider = ({ children }: Props) => {
   const [[state, command], dispatch] = useReducer(step, initialStep);
 
   useEffect(() => {
-    Option.map(command, (next) =>
-      Effect.runFork(runCommand(next, dispatch, () => router.invalidate())),
-    );
+    if (Option.isSome(command)) {
+      Effect.runFork(
+        runCommand(command.value, { dispatch, refreshTodos: () => router.invalidate() }),
+      );
+    }
   }, [command, router]);
 
   return (
@@ -29,38 +37,72 @@ export const TodoProvider = ({ children }: Props) => {
   );
 };
 
-export const useTodoState = () => use(TodoStateContext);
-export const useTodoDispatch = () => use(TodoDispatchContext);
+export const useAdding = () => {
+  const dispatch = use(TodoDispatchContext);
+  const { adding } = use(TodoStateContext);
+  const send = (event: AddingEvent) => {
+    dispatch(TodoEvent.Adding({ event }));
+  };
 
-const runCommand = (command: TodoCommand, dispatch: Dispatch, invalidate: () => Promise<void>) => {
-  const send = (event: TodoEvent) =>
-    Effect.sync(() => {
-      dispatch(event);
-    });
-
-  return Match.valueTags(command, {
-    SaveTodo: ({ todo }) =>
-      Effect.tryPromise({
-        try: () => addTodo({ data: todo }),
-        catch: () => AddingEvent.SaveFailed(),
-      }).pipe(
-        Effect.match({ onSuccess: () => AddingEvent.Saved(), onFailure: Function.identity }),
-        Effect.flatMap((event) => send(TodoEvent.Adding({ event }))),
-      ),
-    CompleteTodo: ({ id }) =>
-      Effect.tryPromise({
-        try: () => completeTodo({ data: { id } }),
-        catch: () => CompletionEvent.CompleteFailed(),
-      }).pipe(
-        Effect.match({
-          onSuccess: () => CompletionEvent.Completed(),
-          onFailure: Function.identity,
-        }),
-        Effect.flatMap((event) => send(TodoEvent.Completion({ id, event }))),
-      ),
-    InvalidateLoader: () => Effect.promise(invalidate),
-  });
+  return {
+    adding,
+    edit: (title: string) => {
+      send(AddingEvent.Edit({ title }));
+    },
+    submit: (formEvent: SyntheticEvent) => {
+      formEvent.preventDefault();
+      send(AddingEvent.Submit());
+    },
+    retry: () => {
+      send(AddingEvent.Retry());
+    },
+  };
 };
+
+export const useCompletion = (id: TodoId) => {
+  const dispatch = use(TodoDispatchContext);
+  const state = use(TodoStateContext);
+  const send = (event: CompletionEvent) => {
+    dispatch(TodoEvent.Completion({ id, event }));
+  };
+
+  return {
+    completion: completionOf({ id, state }),
+    complete: () => {
+      send(CompletionEvent.Complete());
+    },
+    retry: () => {
+      send(CompletionEvent.Retry());
+    },
+  };
+};
+
+const runCommand = (
+  command: TodoCommand,
+  { dispatch, refreshTodos }: Readonly<{ dispatch: Dispatch; refreshTodos: () => Promise<void> }>,
+) =>
+  Match.valueTags(command, {
+    SaveTodo: ({ todo }) =>
+      request(() => addTodo({ data: todo }), {
+        succeeded: TodoEvent.Adding({ event: AddingEvent.Saved() }),
+        failed: TodoEvent.Adding({ event: AddingEvent.SaveFailed() }),
+      }).pipe(Effect.map(dispatch)),
+    CompleteTodo: ({ id }) =>
+      request(() => completeTodo({ data: { id } }), {
+        succeeded: TodoEvent.Completion({ id, event: CompletionEvent.Completed() }),
+        failed: TodoEvent.Completion({ id, event: CompletionEvent.CompleteFailed() }),
+      }).pipe(Effect.map(dispatch)),
+    RefreshTodos: () => Effect.promise(refreshTodos),
+  });
+
+const request = <Event,>(
+  call: () => Promise<unknown>,
+  { succeeded, failed }: Readonly<{ succeeded: Event; failed: Event }>,
+) =>
+  Effect.tryPromise({ try: call, catch: () => failed }).pipe(
+    Effect.as(succeeded),
+    Effect.orElseSucceed(() => failed),
+  );
 
 const step = ([state]: TodoStep, event: TodoEvent) => transitionTodo({ state, event });
 const initialStep: TodoStep = [initialTodoState, Option.none()];

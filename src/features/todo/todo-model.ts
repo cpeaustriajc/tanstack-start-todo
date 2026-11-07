@@ -7,15 +7,13 @@ import { AddingState, transitionAdding } from "#/features/todo/adding-model.ts";
 import type { CompletionCommand, CompletionEvent } from "#/features/todo/completion-model.ts";
 import { CompletionState, transitionCompletion } from "#/features/todo/completion-model.ts";
 
-type Id = typeof TodoId.Type;
-
 export type TodoState = Readonly<{
   adding: AddingState;
-  completions: Readonly<Record<Id, CompletionState>>;
+  completions: Readonly<Record<TodoId, CompletionState>>;
 }>;
 export type TodoEvent = Data.TaggedEnum<{
   Adding: { readonly event: AddingEvent };
-  Completion: { readonly id: Id; readonly event: CompletionEvent };
+  Completion: { readonly id: TodoId; readonly event: CompletionEvent };
 }>;
 export type TodoCommand = AddingCommand | CompletionCommand;
 export type TodoStep = readonly [TodoState, Option.Option<TodoCommand>];
@@ -32,8 +30,8 @@ export const transitionTodo = ({
   event,
 }: Readonly<{ state: TodoState; event: TodoEvent }>): TodoStep =>
   Match.valueTags(event, {
-    Adding: (adding): TodoStep => {
-      const [next, command] = transitionAdding({ state: state.adding, event: adding.event });
+    Adding: ({ event: addingEvent }): TodoStep => {
+      const [next, command] = transitionAdding({ state: state.adding, event: addingEvent });
       return [{ ...state, adding: next }, command];
     },
     Completion: ({ id, event: completionEvent }): TodoStep => {
@@ -46,5 +44,5 @@ export const transitionTodo = ({
     },
   });
 
-export const completionOf = ({ id, state }: Readonly<{ id: Id; state: TodoState }>) =>
+export const completionOf = ({ id, state }: Readonly<{ id: TodoId; state: TodoState }>) =>
   state.completions[id] ?? CompletionState.Idle();

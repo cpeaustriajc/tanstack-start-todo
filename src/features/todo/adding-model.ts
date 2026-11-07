@@ -18,10 +18,9 @@ export type AddingEvent = Data.TaggedEnum<{
 }>;
 export type AddingCommand = Data.TaggedEnum<{
   SaveTodo: { readonly todo: NewTodo };
-  InvalidateLoader: Empty;
+  RefreshTodos: Empty;
 }>;
 type AddingStep = readonly [AddingState, Option.Option<AddingCommand>];
-type Editing = Data.TaggedEnum.Value<AddingState, "Editing">;
 
 export const AddingState = Data.taggedEnum<AddingState>();
 export const AddingEvent = Data.taggedEnum<AddingEvent>();
@@ -34,7 +33,7 @@ export const transitionAdding = ({
   Match.valueTags(state, {
     Editing: (editing) =>
       Match.valueTags(event, {
-        Edit: ({ title }) => stay(AddingState.Editing({ title })),
+        Edit: ({ title }) => to(AddingState.Editing({ title })),
         Submit: () => submit(editing),
         Saved: () => stay(editing),
         SaveFailed: () => stay(editing),
@@ -44,8 +43,8 @@ export const transitionAdding = ({
       Match.valueTags(event, {
         Edit: () => stay(submitting),
         Submit: () => stay(submitting),
-        Saved: () => enter(AddingState.Editing({ title: "" }), AddingCommand.InvalidateLoader()),
-        SaveFailed: () => stay(AddingState.AddFailed({ todo: submitting.todo })),
+        Saved: () => to(AddingState.Editing({ title: "" }), AddingCommand.RefreshTodos()),
+        SaveFailed: () => to(AddingState.AddFailed({ todo: submitting.todo })),
         Retry: () => stay(submitting),
       }),
     AddFailed: (failed) =>
@@ -65,6 +64,8 @@ export const titleOf = (state: AddingState) =>
     AddFailed: ({ todo }) => todo.title,
   });
 
+type Editing = Data.TaggedEnum.Value<AddingState, "Editing">;
+
 const submit = (editing: Editing) =>
   Option.match(Option.liftPredicate({ title: editing.title }, isNewTodo), {
     onSome: save,
@@ -72,13 +73,13 @@ const submit = (editing: Editing) =>
   });
 
 const save = (todo: NewTodo) =>
-  enter(AddingState.Submitting({ todo }), AddingCommand.SaveTodo({ todo }));
+  to(AddingState.Submitting({ todo }), AddingCommand.SaveTodo({ todo }));
 
 const stay = (state: AddingState): AddingStep => [state, Option.none()];
 
-const enter = (state: AddingState, command: AddingCommand): AddingStep => [
+const to = (state: AddingState, command?: AddingCommand): AddingStep => [
   state,
-  Option.some(command),
+  Option.fromUndefinedOr(command),
 ];
 
 const isNewTodo = Schema.is(NewTodo);

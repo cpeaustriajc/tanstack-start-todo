@@ -13,7 +13,7 @@ export const Route = createFileRoute("/api/todos")({
         runtime.runPromise(
           Effect.promise(() => request.text()).pipe(
             Effect.flatMap(decodeNewTodo),
-            Effect.matchEffect({ onSuccess: addResponse, onFailure: badRequest }),
+            Effect.matchEffect({ onSuccess: addResponse, onFailure: rejectInvalidTodo }),
           ),
         ),
     },
@@ -21,21 +21,21 @@ export const Route = createFileRoute("/api/todos")({
 });
 
 const listResponse = Effect.gen(function* () {
-  const todos = yield* TodoRepository;
-  const all = yield* todos.list;
-  const body = yield* Schema.encodeEffect(TodoList)(all);
+  const repository = yield* TodoRepository;
+  const todos = yield* repository.list;
+  const body = yield* Schema.encodeEffect(TodoList)(todos);
   return Response.json(body);
 });
 
+const decodeNewTodo = Schema.decodeEffect(Schema.fromJsonString(NewTodo));
+
 const addResponse = (todo: NewTodo) =>
   Effect.gen(function* () {
-    const todos = yield* TodoRepository;
-    const added = yield* todos.add(todo);
+    const repository = yield* TodoRepository;
+    const added = yield* repository.add(todo);
     const body = yield* Schema.encodeEffect(Todo)(added);
     return Response.json(body, { status: 201 });
   });
 
-const badRequest = ({ message }: Readonly<{ message: string }>) =>
+const rejectInvalidTodo = ({ message }: Readonly<{ message: string }>) =>
   Effect.succeed(Response.json({ error: message }, { status: 400 }));
-
-const decodeNewTodo = Schema.decodeEffect(Schema.fromJsonString(NewTodo));
