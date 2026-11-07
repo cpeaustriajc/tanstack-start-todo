@@ -67,10 +67,9 @@ export const titleOf = (state: AddingState) =>
 type Editing = Data.TaggedEnum.Value<AddingState, "Editing">;
 
 const submit = (editing: Editing) =>
-  Option.match(Option.liftPredicate({ title: editing.title }, isNewTodo), {
-    onSome: save,
-    onNone: () => stay(editing),
-  });
+  hasTitle(editing) ? save({ title: editing.title }) : stay(editing);
+
+const hasTitle = ({ title }: Editing) => Schema.is(NewTodo)({ title });
 
 const save = (todo: NewTodo) =>
   to(AddingState.Submitting({ todo }), AddingCommand.SaveTodo({ todo }));
@@ -81,5 +80,3 @@ const to = (state: AddingState, command?: AddingCommand): AddingStep => [
   state,
   Option.fromUndefinedOr(command),
 ];
-
-const isNewTodo = Schema.is(NewTodo);
