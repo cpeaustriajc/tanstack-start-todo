@@ -1,27 +1,11 @@
-import { Effect, Schema } from "effect";
-import { NewTodo, Todo, TodoList } from "#/domain/todo.ts";
-import type { TodoError } from "#/server/todo/todo-repository.ts";
-import { TodoRepository } from "#/server/todo/todo-repository.ts";
 import { createFileRoute } from "@tanstack/react-router";
-import { runtime } from "#/server/runtime.ts";
+import { Effect, Schema } from "effect";
 
-const created = 201;
-const badRequest = 400;
-const decodeNewTodo = Schema.decodeEffect(Schema.fromJsonString(NewTodo));
-const listResponse = Effect.gen(function* list() {
-  const todos = yield* TodoRepository;
-  const all = yield* todos.list;
-  const body = yield* Schema.encodeEffect(TodoList)(all);
-  return Response.json(body);
-});
-const addResponse = (todo: NewTodo): Effect.Effect<Response, TodoError, TodoRepository> =>
-  Effect.gen(function* add() {
-    const todos = yield* TodoRepository;
-    const added = yield* todos.add(todo);
-    const body = yield* Schema.encodeEffect(Todo)(added);
-    return Response.json(body, { status: created });
-  });
-const Route = createFileRoute("/api/todos")({
+import { NewTodo, Todo, TodoList } from "#/domain/todo.ts";
+import { runtime } from "#/server/runtime.ts";
+import { TodoRepository } from "#/server/todo/todo-repository.ts";
+
+export const Route = createFileRoute("/api/todos")({
   server: {
     handlers: {
       GET: () => runtime.runPromise(listResponse),
@@ -29,15 +13,29 @@ const Route = createFileRoute("/api/todos")({
         runtime.runPromise(
           Effect.promise(() => request.text()).pipe(
             Effect.flatMap(decodeNewTodo),
-            Effect.matchEffect({
-              onFailure: ({ message }) =>
-                Effect.succeed(Response.json({ error: message }, { status: badRequest })),
-              onSuccess: addResponse,
-            }),
+            Effect.matchEffect({ onSuccess: addResponse, onFailure: badRequest }),
           ),
         ),
     },
   },
 });
 
-export { Route };
+const listResponse = Effect.gen(function* () {
+  const todos = yield* TodoRepository;
+  const all = yield* todos.list;
+  const body = yield* Schema.encodeEffect(TodoList)(all);
+  return Response.json(body);
+});
+
+const addResponse = (todo: NewTodo) =>
+  Effect.gen(function* () {
+    const todos = yield* TodoRepository;
+    const added = yield* todos.add(todo);
+    const body = yield* Schema.encodeEffect(Todo)(added);
+    return Response.json(body, { status: 201 });
+  });
+
+const badRequest = ({ message }: Readonly<{ message: string }>) =>
+  Effect.succeed(Response.json({ error: message }, { status: 400 }));
+
+const decodeNewTodo = Schema.decodeEffect(Schema.fromJsonString(NewTodo));

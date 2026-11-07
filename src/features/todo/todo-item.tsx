@@ -1,49 +1,42 @@
+import { Option } from "effect";
+
+import { Checkbox } from "#/components/ui/checkbox.tsx";
+import type { Todo } from "#/domain/todo.ts";
 import { CompletionEvent, CompletionState } from "#/features/todo/completion-model.ts";
+import { RetryAlert } from "#/features/todo/retry-alert.tsx";
 import { TodoEvent, completionOf } from "#/features/todo/todo-model.ts";
 import { useTodoDispatch, useTodoState } from "#/features/todo/todo-provider.tsx";
-import { Button } from "#/components/ui/button.tsx";
-import { Checkbox } from "#/components/ui/checkbox.tsx";
-import { Option } from "effect";
-import type { ReactElement } from "react";
-import type { Todo } from "#/domain/todo.ts";
 
 type Props = Readonly<{ todo: Todo }>;
 
-const FAILED_MESSAGE = "Could not complete the todo.";
-const RETRY_TEXT = "Retry";
-
-const TodoItem = ({ todo }: Props): ReactElement => {
+export const TodoItem = ({ todo }: Props) => {
   const dispatch = useTodoDispatch();
-  const state = useTodoState();
-  const completion = completionOf({ id: todo.id, state });
+  const completion = completionOf({ id: todo.id, state: useTodoState() });
   const isDone = Option.isSome(todo.doneAt);
+  const isIdle = CompletionState.$is("Idle")(completion);
   const isCompleting = CompletionState.$is("Completing")(completion);
-  const complete = (): void => {
-    dispatch(TodoEvent.Completion({ event: CompletionEvent.Complete(), id: todo.id }));
+  const hasFailed = CompletionState.$is("CompleteFailed")(completion);
+
+  const send = (event: CompletionEvent) => {
+    dispatch(TodoEvent.Completion({ id: todo.id, event }));
   };
-  const retry = (): void => {
-    dispatch(TodoEvent.Completion({ event: CompletionEvent.Retry(), id: todo.id }));
+  const complete = () => {
+    send(CompletionEvent.Complete());
+  };
+  const retry = () => {
+    send(CompletionEvent.Retry());
   };
 
   return (
     <li className="flex flex-col gap-1">
       <Checkbox
-        isDisabled={isDone || !CompletionState.$is("Idle")(completion)}
+        isDisabled={isDone || !isIdle}
         isSelected={isDone || isCompleting}
         onChange={complete}
       >
         {todo.title}
       </Checkbox>
-      {CompletionState.$is("CompleteFailed")(completion) && (
-        <p className="flex items-center gap-2 text-sm text-destructive" role="alert">
-          {FAILED_MESSAGE}
-          <Button onPress={retry} size="sm" variant="outline">
-            {RETRY_TEXT}
-          </Button>
-        </p>
-      )}
+      {hasFailed && <RetryAlert onRetry={retry}>Could not complete the todo.</RetryAlert>}
     </li>
   );
 };
-
-export { TodoItem };

@@ -1,36 +1,37 @@
-import { Effect, Schema } from "effect";
-import { NewTodo, TodoRef } from "#/domain/todo.ts";
-import { TodoRepository } from "#/server/todo/todo-repository.ts";
 import { createServerFn } from "@tanstack/react-start";
-import { runtime } from "#/server/runtime.ts";
+import { Effect, Schema } from "effect";
 
-const listTodos = createServerFn({ method: "GET" }).handler(() =>
+import { NewTodo, TodoRef } from "#/domain/todo.ts";
+import { runtime } from "#/server/runtime.ts";
+import { TodoRepository } from "#/server/todo/todo-repository.ts";
+
+export const listTodos = createServerFn({ method: "GET" }).handler(() =>
   runtime.runPromise(
-    Effect.gen(function* list() {
+    Effect.gen(function* () {
       const todos = yield* TodoRepository;
       return yield* todos.list;
     }),
   ),
 );
-const addTodo = createServerFn({ method: "POST" })
+
+export const addTodo = createServerFn({ method: "POST" })
   .validator(Schema.toStandardSchemaV1(NewTodo))
   .handler(({ data }) =>
     runtime.runPromise(
-      Effect.gen(function* add() {
+      Effect.gen(function* () {
         const todos = yield* TodoRepository;
         return yield* todos.add(data);
       }),
     ),
   );
-const completeTodo = createServerFn({ method: "POST" })
+
+export const completeTodo = createServerFn({ method: "POST" })
   .validator(Schema.toStandardSchemaV1(TodoRef))
   .handler(({ data }) =>
     runtime.runPromise(
-      Effect.gen(function* complete() {
+      Effect.gen(function* () {
         const todos = yield* TodoRepository;
         yield* todos.complete(data);
       }),
     ),
   );
-
-export { addTodo, completeTodo, listTodos };

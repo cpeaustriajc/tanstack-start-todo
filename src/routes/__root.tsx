@@ -1,8 +1,8 @@
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+
 import stylesheet from "#/styles.css?url";
 
-const RootDocument = (): ReactElement => (
+const RootDocument = () => (
   <html lang="en">
     <head>
       <HeadContent />
@@ -13,16 +13,15 @@ const RootDocument = (): ReactElement => (
     </body>
   </html>
 );
-const Route = createRootRoute({
-  component: RootDocument,
+
+export const Route = createRootRoute({
   head: () => ({
-    links: [{ href: stylesheet, rel: "stylesheet" }],
+    links: [{ rel: "stylesheet", href: stylesheet }],
     meta: [
       { charSet: "utf8" },
-      { content: "width=device-width, initial-scale=1", name: "viewport" },
+      { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Todos" },
     ],
   }),
+  component: RootDocument,
 });
-
-export { Route };

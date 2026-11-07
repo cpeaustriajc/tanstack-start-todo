@@ -1,44 +1,49 @@
 #!/usr/bin/env node
-import { Console, Effect, ManagedRuntime, Option, Schema } from "effect";
-import { NewTodo, TodoRef } from "#/domain/todo.ts";
 import { Command } from "@commander-js/extra-typings";
+import { Console, Effect, ManagedRuntime, Option, Schema } from "effect";
+
+import { NewTodo, TodoRef } from "#/domain/todo.ts";
 import type { Todo } from "#/domain/todo.ts";
+import { layer } from "#/server/runtime.ts";
 import type { TodoError } from "#/server/todo/todo-repository.ts";
 import { TodoRepository } from "#/server/todo/todo-repository.ts";
-import { layer } from "#/server/runtime.ts";
 
 await using runtime = ManagedRuntime.make(layer);
 
 const program = new Command("todo");
-const run = <Value>(effect: Effect.Effect<Value, TodoError, TodoRepository>): Promise<Value> =>
+
+const run = <Value>(effect: Effect.Effect<Value, TodoError, TodoRepository>) =>
   runtime.runPromise(
     effect.pipe(
       Effect.catchTag("SchemaError", ({ message }) => Effect.sync(() => program.error(message))),
     ),
   );
-const mark = (todo: Todo): string =>
-  Option.match(todo.doneAt, { onNone: () => "[ ]", onSome: () => "[x]" });
-const runAdd = (title: string): Promise<void> =>
+
+const mark = (todo: Todo) => (Option.isSome(todo.doneAt) ? "[x]" : "[ ]");
+
+const runAdd = (title: string) =>
   run(
-    Effect.gen(function* add() {
+    Effect.gen(function* () {
       const todos = yield* TodoRepository;
       const newTodo = yield* Schema.decodeEffect(NewTodo)({ title });
       const todo = yield* todos.add(newTodo);
       yield* Console.log(`added #${todo.id}`);
     }),
   );
-const runList = (): Promise<void> =>
+
+const runList = () =>
   run(
-    Effect.gen(function* list() {
+    Effect.gen(function* () {
       const todos = yield* TodoRepository;
       for (const todo of yield* todos.list) {
         yield* Console.log(`${mark(todo)} #${todo.id} ${todo.title}`);
       }
     }),
   );
-const runDone = (id: string): Promise<void> =>
+
+const runDone = (id: string) =>
   run(
-    Effect.gen(function* done() {
+    Effect.gen(function* () {
       const todos = yield* TodoRepository;
       const ref = yield* Schema.decodeEffect(TodoRef)({ id: Number(id) });
       yield* todos.complete(ref);

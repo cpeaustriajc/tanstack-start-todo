@@ -100,6 +100,24 @@
       }
     ],
     "eslint/one-var": "off",
+    "eslint/sort-keys": "off",
+    "eslint/sort-imports": "off",
+    "eslint/no-ternary": "off",
+    "eslint/no-magic-numbers": "off",
+    "eslint/func-names": "off",
+    "eslint/no-use-before-define": [
+      "error",
+      {
+        "classes": true,
+        "functions": true,
+        "variables": false
+      }
+    ],
+    "import/exports-last": "off",
+    "import/group-exports": "off",
+    "react/jsx-no-literals": "off",
+    "typescript/explicit-function-return-type": "off",
+    "typescript/explicit-module-boundary-types": "off",
     "no-restricted-imports": [
       "error",
       {

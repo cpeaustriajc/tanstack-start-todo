@@ -1,9 +1,8 @@
 import { createFileRoute, useLoaderData } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+
 import { TodoPage } from "#/features/todo/todo-page.tsx";
 import { listTodos } from "#/server/todo/todo-functions.ts";
 
-const TodoRoute = (): ReactElement => <TodoPage todos={useLoaderData({ from: "/" })} />;
-const Route = createFileRoute("/")({ component: TodoRoute, loader: () => listTodos() });
+const TodoRoute = () => <TodoPage todos={useLoaderData({ from: "/" })} />;
 
-export { Route };
+export const Route = createFileRoute("/")({ component: TodoRoute, loader: () => listTodos() });
