@@ -6,6 +6,7 @@ import { createContext, use, useEffect, useReducer } from "react";
 import type { TodoId } from "#/domain/todo-id.ts";
 import { AddingEvent } from "#/features/todo/adding-model.ts";
 import { CompletionEvent } from "#/features/todo/completion-model.ts";
+import { RequestFailed } from "#/features/todo/request-failed-error.ts";
 import type { TodoCommand, TodoState, TodoStep } from "#/features/todo/todo-model.ts";
 import {
   TodoEvent,
@@ -99,8 +100,9 @@ const request = <Event,>(
   call: () => Promise<unknown>,
   { succeeded, failed }: Readonly<{ succeeded: Event; failed: Event }>,
 ) =>
-  Effect.tryPromise({ try: call, catch: () => failed }).pipe(
+  Effect.tryPromise({ try: call, catch: (cause) => RequestFailed.make({ cause }) }).pipe(
     Effect.as(succeeded),
+    Effect.tapError(Effect.logError),
     Effect.orElseSucceed(() => failed),
   );
 

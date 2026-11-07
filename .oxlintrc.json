@@ -164,6 +164,12 @@
       }
     },
     {
+      "files": ["src/**/*-error.ts"],
+      "rules": {
+        "unicorn/throw-new-error": "off"
+      }
+    },
+    {
       "files": ["src/routes/**"],
       "rules": {
         "react/only-export-components": "off"

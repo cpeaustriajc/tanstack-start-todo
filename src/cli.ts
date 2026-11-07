@@ -19,7 +19,7 @@ const run = <Value>(effect: Effect.Effect<Value, TodoError, TodoRepository>) =>
     ),
   );
 
-const mark = (todo: Todo) => (Option.isSome(todo.doneAt) ? "[x]" : "[ ]");
+const checkboxOf = (todo: Todo) => (Option.isSome(todo.doneAt) ? "[x]" : "[ ]");
 
 const runAdd = (title: string) =>
   run(
@@ -37,7 +37,7 @@ const runList = () =>
       const repository = yield* TodoRepository;
       const todos = yield* repository.list;
       for (const todo of todos) {
-        yield* Console.log(`${mark(todo)} #${todo.id} ${todo.title}`);
+        yield* Console.log(`${checkboxOf(todo)} #${todo.id} ${todo.title}`);
       }
     }),
   );
